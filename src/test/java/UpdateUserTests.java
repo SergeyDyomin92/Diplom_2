@@ -1,3 +1,4 @@
+import api.client.UserClient;
 import constants.Url;
 import io.qameta.allure.Description;
 import io.qameta.allure.Step;
@@ -19,12 +20,13 @@ import static org.hamcrest.Matchers.equalTo;
 
 public class UpdateUserTests {
 
+
+    private User user;
+    private Response response;
+    private String token;
+
     Utils utils = new Utils();
-    CreateUserTests createUserTests = new CreateUserTests();
-    AuthorizationUserTests authorizationUserTests = new AuthorizationUserTests();
-    User user;
-    Response response;
-    String token;
+    UserClient userClient = new UserClient();
 
     @Before
     public void setUp() {
@@ -36,11 +38,11 @@ public class UpdateUserTests {
     @Description("Авторизованный пользователь. Обновление имени")
     public void updateAuthorizedUserName() {
         user = randomUser();
-        createUserTests.sendPostAPIAuthRegister(user);
-        Response authResponse = authorizationUserTests.sendPostRequestAPIAuthLogin(user);
+        userClient.sendPostAPIAuthRegister(user);
+        Response authResponse = userClient.sendPostRequestAPIAuthLogin(user);
         String newName = utils.name;
 
-        token = authorizationUserTests.getTokenFromResponse(authResponse);
+        token = userClient.getTokenFromResponse(authResponse);
         response = sendPatchRequestAPIAuthUser(token, format("{\"name\": \"%s\"}", newName));
 
         checkResponseStatusCodeIs(response, 200);
@@ -53,11 +55,11 @@ public class UpdateUserTests {
     @Description("Авторизованный пользователь. Обновление имейла")
     public void updateAuthorizedUserEmail() {
         user = randomUser();
-        createUserTests.sendPostAPIAuthRegister(user);
-        Response authResponse = authorizationUserTests.sendPostRequestAPIAuthLogin(user);
+        userClient.sendPostAPIAuthRegister(user);
+        Response authResponse = userClient.sendPostRequestAPIAuthLogin(user);
         String newEmail = utils.email;
 
-        token = authorizationUserTests.getTokenFromResponse(authResponse);
+        token = userClient.getTokenFromResponse(authResponse);
         response = sendPatchRequestAPIAuthUser(token, format("{\"email\": \"%s\"}", newEmail));
 
         checkResponseStatusCodeIs(response, 200);
@@ -70,12 +72,12 @@ public class UpdateUserTests {
     @Description("Авторизованный пользователь. Невозможность обновления имейла на используемый")
     public void updateAuthorizedUserBusyEmail() {
         User preContitionUser = randomUser();
-        createUserTests.sendPostAPIAuthRegister(preContitionUser);
+        userClient.sendPostAPIAuthRegister(preContitionUser);
         user = randomUser();
-        createUserTests.sendPostAPIAuthRegister(user);
-        Response authResponse = authorizationUserTests.sendPostRequestAPIAuthLogin(user);
+        userClient.sendPostAPIAuthRegister(user);
+        Response authResponse = userClient.sendPostRequestAPIAuthLogin(user);
 
-        token = authorizationUserTests.getTokenFromResponse(authResponse);
+        token = userClient.getTokenFromResponse(authResponse);
         response = sendPatchRequestAPIAuthUser(token, format("{\"email\": \"%s\"}", preContitionUser.getEmail()));
 
         checkResponseStatusCodeIs(response, 403);
@@ -88,11 +90,11 @@ public class UpdateUserTests {
     @Description("Авторизованный пользователь. Обновление пароля")
     public void updateAuthorizedUserPassword() {
         user = randomUser();
-        createUserTests.sendPostAPIAuthRegister(user);
-        Response authResponse = authorizationUserTests.sendPostRequestAPIAuthLogin(user);
+        userClient.sendPostAPIAuthRegister(user);
+        Response authResponse = userClient.sendPostRequestAPIAuthLogin(user);
         String newPassword = utils.password;
 
-        token = authorizationUserTests.getTokenFromResponse(authResponse);
+        token = userClient.getTokenFromResponse(authResponse);
         response = sendPatchRequestAPIAuthUser(token, format("{\"password\": \"%s\"}", newPassword));
 
         checkResponseStatusCodeIs(response, 200);
@@ -105,7 +107,7 @@ public class UpdateUserTests {
     @Description("Неавторизованный пользователь. Невозможность обновления имени")
     public void updateNotAuthorizedUserName() {
         user = randomUser();
-        token = createUserTests.getTokenFromResponse(createUserTests.sendPostAPIAuthRegister(user));
+        token = userClient.getTokenFromResponse(userClient.sendPostAPIAuthRegister(user));
         response = sendPatchRequestAPIAuthUser(token, format("{\"name\": \"%s\"}", utils.name));
 
         checkResponseStatusCodeIs(response, 401);
@@ -118,7 +120,7 @@ public class UpdateUserTests {
     @Description("Неавторизованный пользователь. Невозможность обновления имейла")
     public void updateNotAuthorizedUserEmail() {
         user = randomUser();
-        token = createUserTests.getTokenFromResponse(createUserTests.sendPostAPIAuthRegister(user));
+        token = userClient.getTokenFromResponse(userClient.sendPostAPIAuthRegister(user));
         response = sendPatchRequestAPIAuthUser(token, format("{\"email\": \"%s\"}", utils.email));
 
         checkResponseStatusCodeIs(response, 401);
@@ -131,9 +133,9 @@ public class UpdateUserTests {
     @Description("Неавторизованный пользователь. Невозможность обновления имейла на используемый")
     public void updateNotAuthorizedUserBusyEmail() {
         User preContitionUser = randomUser();
-        createUserTests.sendPostAPIAuthRegister(preContitionUser);
+        userClient.sendPostAPIAuthRegister(preContitionUser);
         user = randomUser();
-        token = createUserTests.getTokenFromResponse(createUserTests.sendPostAPIAuthRegister(user));
+        token = userClient.getTokenFromResponse(userClient.sendPostAPIAuthRegister(user));
         response = sendPatchRequestAPIAuthUser(token, format("{\"email\": \"%s\"}", preContitionUser.getEmail()));
 
         checkResponseStatusCodeIs(response, 403);
@@ -146,7 +148,7 @@ public class UpdateUserTests {
     @Description("Неавторизованный пользователь. Невозможность обновления пароля")
     public void updateNotAuthorizedUserPassword() {
         user = randomUser();
-        token = createUserTests.getTokenFromResponse(createUserTests.sendPostAPIAuthRegister(user));
+        token = userClient.getTokenFromResponse(userClient.sendPostAPIAuthRegister(user));
         response = sendPatchRequestAPIAuthUser(token, format("{\"password\": \"%s\"}", utils.password));
 
         checkResponseStatusCodeIs(response, 401);

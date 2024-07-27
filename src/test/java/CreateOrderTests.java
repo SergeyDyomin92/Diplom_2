@@ -1,6 +1,7 @@
+import api.client.OrdersClient;
+import api.client.UserClient;
 import constants.Url;
 import io.qameta.allure.Description;
-import io.qameta.allure.Step;
 import io.qameta.allure.junit4.DisplayName;
 import io.restassured.RestAssured;
 import io.restassured.response.Response;
@@ -12,21 +13,19 @@ import org.junit.Test;
 
 import java.util.Objects;
 
-import static io.restassured.RestAssured.given;
-import static java.lang.String.format;
 import static models.OrderGenerator.*;
 import static models.UserGenerator.randomUser;
-import static org.hamcrest.Matchers.equalTo;
 
 public class CreateOrderTests {
 
-    CreateUserTests createUserTests = new CreateUserTests();
-    AuthorizationUserTests authorizationUserTests = new AuthorizationUserTests();
+    private User user;
+    private Response response;
+    private String token;
+    private Order order;
+
+    UserClient userClient = new UserClient();
+    OrdersClient ordersClient = new OrdersClient();
     UpdateUserTests updateUserTests = new UpdateUserTests();
-    User user;
-    Response response;
-    String token;
-    Order order;
 
     @Before
     public void setUp() {
@@ -39,13 +38,13 @@ public class CreateOrderTests {
     public void createNewOrder() {
         user = randomUser();
         order = randomOrder();
-        createUserTests.sendPostAPIAuthRegister(user);
-        token = authorizationUserTests.getTokenFromResponse(authorizationUserTests.sendPostRequestAPIAuthLogin(user));
+        userClient.sendPostAPIAuthRegister(user);
+        token = userClient.getTokenFromResponse(userClient.sendPostRequestAPIAuthLogin(user));
 
-        response = sendPostRequestAPIOrders(token, order);
+        response = ordersClient.sendPostRequestAPIOrders(token, order);
 
-        checkResponseStatusCodeIs(response, 200);
-        checkResponseKeyAndValueAre(response, "success", true);
+        ordersClient.checkResponseStatusCodeIs(response, 200);
+        ordersClient.checkResponseKeyAndValueAre(response, "success", true);
         response.body().prettyPeek();
     }
 
@@ -55,13 +54,13 @@ public class CreateOrderTests {
     public void createNewOrderForNotAuthorizedUser() {
         user = randomUser();
         order = randomOrder();
-        token = authorizationUserTests.getTokenFromResponse(createUserTests.sendPostAPIAuthRegister(user));
+        token = userClient.getTokenFromResponse(userClient.sendPostAPIAuthRegister(user));
 
-        response = sendPostRequestAPIOrders(token, order);
+        response = ordersClient.sendPostRequestAPIOrders(token, order);
 
-        checkResponseStatusCodeIs(response, 401);
-        checkResponseKeyAndValueAre(response, "success", false);
-        checkResponseKeyAndValueAre(response, "message", "You should be authorised");
+        ordersClient.checkResponseStatusCodeIs(response, 401);
+        ordersClient.checkResponseKeyAndValueAre(response, "success", false);
+        ordersClient.checkResponseKeyAndValueAre(response, "message", "You should be authorised");
     }
 
     @Test
@@ -70,14 +69,14 @@ public class CreateOrderTests {
     public void createNewOrderWithoutIngredients() {
         user = randomUser();
         order = randomOrderWithoutIngredients();
-        createUserTests.sendPostAPIAuthRegister(user);
-        token = authorizationUserTests.getTokenFromResponse(authorizationUserTests.sendPostRequestAPIAuthLogin(user));
+        userClient.sendPostAPIAuthRegister(user);
+        token = userClient.getTokenFromResponse(userClient.sendPostRequestAPIAuthLogin(user));
 
-        response = sendPostRequestAPIOrders(token, order);
+        response = ordersClient.sendPostRequestAPIOrders(token, order);
 
-        checkResponseStatusCodeIs(response, 400);
-        checkResponseKeyAndValueAre(response, "success", false);
-        checkResponseKeyAndValueAre(response, "message", "Ingredient ids must be provided");
+        ordersClient.checkResponseStatusCodeIs(response, 400);
+        ordersClient.checkResponseKeyAndValueAre(response, "success", false);
+        ordersClient.checkResponseKeyAndValueAre(response, "message", "Ingredient ids must be provided");
         response.body().prettyPeek();
     }
 
@@ -87,32 +86,15 @@ public class CreateOrderTests {
     public void createNewOrderWithInvalidIngredientsHash() {
         user = randomUser();
         order = randomOrderWithInvalidIngredientsHash();
-        createUserTests.sendPostAPIAuthRegister(user);
-        token = authorizationUserTests.getTokenFromResponse(authorizationUserTests.sendPostRequestAPIAuthLogin(user));
+        userClient.sendPostAPIAuthRegister(user);
+        token = userClient.getTokenFromResponse(userClient.sendPostRequestAPIAuthLogin(user));
 
-        response = sendPostRequestAPIOrders(token, order);
+        response = ordersClient.sendPostRequestAPIOrders(token, order);
 
-        checkResponseStatusCodeIs(response, 500);
-        checkResponseKeyAndValueAre(response, "success", false);
-        checkResponseKeyAndValueAre(response, "message", "Internal Server Error");
+        ordersClient.checkResponseStatusCodeIs(response, 500);
+        ordersClient.checkResponseKeyAndValueAre(response, "success", false);
+        ordersClient.checkResponseKeyAndValueAre(response, "message", "Internal Server Error");
         response.body().prettyPeek();
-    }
-
-    @Step("Отправить POST запрос api/orders")
-    public Response sendPostRequestAPIOrders(String token, Order order) {
-        return given().header("Content-type", "application/json; charset=utf-8")
-                .header("Authorization", format("Bearer %s", token))
-                .log().body().body(order).post("api/orders");
-    }
-
-    @Step("Проверить статус-код ответа")
-    public void checkResponseStatusCodeIs(Response response, int code) {
-        response.then().assertThat().statusCode(code);
-    }
-
-    @Step("Проверить ключ и значение ответа")
-    public void checkResponseKeyAndValueAre(Response response, String key, Object value) {
-        response.then().assertThat().body(key, equalTo(value));
     }
 
     @After
